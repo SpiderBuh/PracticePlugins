@@ -24,6 +24,7 @@ using Unity.Mathematics;
 using Steamworks.Ugc;
 using static PracticePlugins.miscExtras;
 using InventorySystem.Items.Usables;
+using Utils.Networking;
 
 namespace PracticePlugins
 {
@@ -64,7 +65,7 @@ namespace PracticePlugins
             public static List<ItemType> VeryHardWeapons = new List<ItemType>() { ItemType.GunCOM15, ItemType.GunCOM18, ItemType.MicroHID };
             public static RoleTypeId[,] Roles = new RoleTypeId[,] { { RoleTypeId.NtfCaptain, RoleTypeId.ChaosRepressor }, { RoleTypeId.NtfSergeant, RoleTypeId.ChaosMarauder }, { RoleTypeId.NtfPrivate, RoleTypeId.ChaosConscript }, { RoleTypeId.Scientist, RoleTypeId.ClassD } }; //Levels
 
-            //public static List<ItemType> nonShuffledWeapons = new List<ItemType>() { ItemType.GunLogicer, ItemType.Jailbird, ItemType.ParticleDisruptor, ItemType.GunRevolver, ItemType.GunCrossvec, ItemType.GunE11SR, ItemType.GunShotgun, ItemType.GunAK, ItemType.GunCom45, ItemType.GunFSP9, ItemType.GunCOM15, ItemType.GunCOM18, ItemType.MicroHID }; //List of non shuffled weapons
+            //public static List<ItemType> nonShuffledWeapons = new List<ItemType>() { ItemType.GunLogicer, /*ItemType.Jailbird, ItemType.ParticleDisruptor,*/ ItemType.GunRevolver, ItemType.GunCrossvec, ItemType.GunE11SR, ItemType.GunShotgun, ItemType.GunAK, ItemType.GunCom45, ItemType.GunFSP9, ItemType.GunCOM15, ItemType.GunCOM18, ItemType.MicroHID }; //List of non shuffled weapons
 
             public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
             {
@@ -98,8 +99,8 @@ namespace PracticePlugins
                         if (plr.IsServer)
                             continue;
 
-                        if (!AssignTeam(plr))
-                            throw new Exception("Player could not be assigned to team");
+                        AssignTeam(plr);
+                            
                         if (!SpawnPlayer(plr))
                             throw new Exception("Player could not be spawned");
                         plr.SendBroadcast("Welcome to GunGame! Race to the final weapon!", 10, shouldClearPrevious: true);
@@ -126,22 +127,22 @@ namespace PracticePlugins
                 credits = 0;
             }
 
-            public bool AssignTeam(Player plr) //Assigns player to team
+            public void AssignTeam(Player plr) //Assigns player to team
             {
                 if (plr.IsServer || plr.Role == PlayerRoles.RoleTypeId.Overwatch || AllPlayers.ContainsKey(plr))
                 {
-                    plr.ReceiveHint("You are already in the dictionary", 5);
-                    return false;
+                    //plr.ReceiveHint("You already have a score...", 1);
+                    return;
                 }
-                plr.ReceiveHint("Assigning team...", 1);
+                //plr.ReceiveHint("Assigning team...", 1);
                 AllPlayers.Add(plr, new plrInfo { IsNtf = (Tntf < Tchaos), Score = 0 });
                 if (Tntf < Tchaos)
                     Tntf++;
                 else
                     Tchaos++;
 
-                plr.ReceiveHint("Assigned team", 2); //Message for testing purposes
-                return true;
+                //plr.ReceiveHint("Assigned team", 2); //Message for testing purposes
+                return;
             }
 
             public void RemovePlayer(Player plr) //Removes player from team
@@ -161,21 +162,21 @@ namespace PracticePlugins
               //  plr.ReceiveHint("Checking if you can spawn...", 1); //Message for testing purposes
                 if (plr.IsServer || plr.Role == PlayerRoles.RoleTypeId.Overwatch || plr.Role == PlayerRoles.RoleTypeId.Tutorial || !AllPlayers.TryGetValue(plr, out var plrStats))
                 {
-                    plr.ReceiveHint("You are unable to spawn", 10);
+                    plr.ReceiveHint("You are unable to spawn. Try rejoining", 10);
                     return false;
                 }
-                plr.ReceiveHint("Attempting spawn...", 2); //Message for testing purposes
-                int level = Mathf.Clamp((int)Math.Round(((double)plrStats.Score / (Weapons.Count-1))*4), 0, 3); //Sets player's class to represent level
+                //plr.ReceiveHint("Attempting spawn...", 2); //Message for testing purposes
+                int level = Mathf.Clamp((int)Math.Round(((double)plrStats.Score / (Weapons.Count))*4), 0, 3); //Sets player's class to represent level
                 if (plrStats.IsNtf) //Spawns either NTF or Chaos based on bool
                 {
-                    plr.ReferenceHub.roleManager.ServerSetRole(Roles[level, 0], RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
-                    //plr.SetRole(Roles[level, 0]);
+                    //plr.ReferenceHub.roleManager.ServerSetRole(Roles[level, 0], RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
+                    plr.SetRole(Roles[level, 0]);
                     plr.Position = new Vector3(NTFSpawn.ApiRoom.Position.x, NTFSpawn.ApiRoom.Position.y + 1, NTFSpawn.ApiRoom.Position.z);
                 }
                 else
                 {
-                    plr.ReferenceHub.roleManager.ServerSetRole(Roles[level, 1], RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
-                    //plr.SetRole(Roles[level, 1]);
+                    //plr.ReferenceHub.roleManager.ServerSetRole(Roles[level, 1], RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
+                    plr.SetRole(Roles[level, 1]);
                     plr.Position = new Vector3(ChaosSpawn.ApiRoom.Position.x, ChaosSpawn.ApiRoom.Position.y + 1, ChaosSpawn.ApiRoom.Position.z);
                 }
                 plr.ClearInventory();
@@ -204,36 +205,20 @@ namespace PracticePlugins
                     }
                     }
 
-                plr.CurrentItem = null;
                 ItemType currGun = Weapons.ElementAt(plrStats.Score);
+                ItemBase weapon = plr.AddItem(currGun);
                 if (IsGun(currGun))
                 {
-                    Firearm firearm = plr.AddItem(currGun) as Firearm;
+                    Firearm firearm = weapon as Firearm;
+                    
                     uint attachment_code = AttachmentsServerHandler.PlayerPreferences[plr.ReferenceHub][currGun];
                     AttachmentsUtils.ApplyAttachmentsCode(firearm, attachment_code, true);
                     firearm.Status = new FirearmStatus(firearm.AmmoManagerModule.MaxAmmo, FirearmStatusFlags.MagazineInserted, attachment_code);
-                    plr.CurrentItem = firearm;
-                    plr.ReferenceHub.inventory.ServerSelectItem(firearm.ItemSerial);
-                    plr.ReferenceHub.inventory.CmdSelectItem(firearm.ItemSerial);
                 }
-                else
+                MEC.Timing.CallDelayed((float)0.1/*MEC.Timing.WaitForOneFrame*/, () =>
                 {
-                    plr.AddItem(Weapons.ElementAt(plrStats.Score)); //Gives next not a gun 
-                    foreach (var item in plr.Items) //Finds and equips next weapon
-                    {
-                        if (item.ItemTypeId == currGun)
-                        {
-                            plr.CurrentItem = item;
-                            plr.ReferenceHub.inventory.ServerSelectItem(item.ItemSerial);
-                            plr.ReferenceHub.inventory.CmdSelectItem(item.ItemSerial);
-                            break;
-
-                            //break;
-                            //PickupSyncInfo test = item.PickupDropModel.Info;
-                            //plr.ReferenceHub.inventory.ServerCreatePickup(item, test);
-                        }
-                    }
-                }
+                plr.CurrentItem = weapon;
+                });
             }
 
 
@@ -242,17 +227,18 @@ namespace PracticePlugins
             {
                 if (plr.IsServer || plr.Role == PlayerRoles.RoleTypeId.Overwatch || plr.Role == PlayerRoles.RoleTypeId.Tutorial || !AllPlayers.TryGetValue(plr, out var plrStats))
                 {
-                    plr.ReceiveHint("You are excluded from the dictionary", 5);
+                    plr.ReceiveHint("You aren't registered as a player. Try rejoining", 5);
                     return;
                 }
 
                    if (plrStats.Score >= Weapons.Count - 1) //Gun just before zombie
                    {
+                       plr.ClearInventory();
                        plr.ReferenceHub.roleManager.ServerSetRole(RoleTypeId.Scp0492, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.AssignInventory); //Spawns zombie without increasing score
                        return;
                    }
                 plrStats.Score++; //Adds 1 to score
-                plr.ReceiveHint("Your new score is: " + plrStats.Score, 5);
+                //plr.ReceiveHint("Your new score is: " + plrStats.Score, 5);
                 GiveGun(plr);
             }
 
@@ -265,20 +251,20 @@ namespace PracticePlugins
                 {
                     var plr = args.Player;
                     plr.ClearInventory();
-                    plr.ReceiveHint("You died", 1);
+                    //plr.ReceiveHint("You died", 1);
                      var atckr = args.Attacker;
-                     if (atckr != null)
+                     if (atckr != null && atckr != plr)
                      {
                          if (atckr.Role == RoleTypeId.Scp0492) //Triggers win if player is zombie
                          {
                              TriggerWin(atckr);
                              return;
                          }
-                         if (atckr != plr && AllPlayers.ContainsKey(atckr))
+                         if (AllPlayers.ContainsKey(atckr))
                          {
                              AddScore(atckr);
-                             plr.ReceiveHint(atckr.LogName + " killed you", 3);
-                             atckr.ReceiveHint("You killed " + plr.LogName, 3);
+                             plr.ReceiveHint(atckr.Nickname + " killed you", 3);
+                             atckr.ReceiveHint("You killed " + plr.Nickname, 3);
 
                          }
                      }
@@ -304,11 +290,12 @@ namespace PracticePlugins
             public void TriggerWin(Player plr) //Win event
             {
                 Round.IsLocked = false;
+                plr.Health = 69420;
                 foreach (Player loser in Player.GetPlayers())
                 {
                     if (loser.IsServer)
                         continue;
-                    loser.SendBroadcast(plr.LogName + " wins!", 10, shouldClearPrevious: true);
+                    loser.SendBroadcast(plr.Nickname + " wins!", 10, shouldClearPrevious: true);
                     if (loser != plr)
                         loser.ReferenceHub.playerEffectsController.EnableEffect<SeveredHands>();
                 }
@@ -320,8 +307,11 @@ namespace PracticePlugins
                 if (Plugin.CurrentEvent == EventType.Gungame)
                 {
                     AssignTeam(args.Player);
-                    SpawnPlayer(args.Player);
                     args.Player.SendBroadcast("Welcome to GunGame! Race to the final weapon!", 10, shouldClearPrevious: true);
+                    MEC.Timing.CallDelayed(3, () =>
+                    {
+                        SpawnPlayer(args.Player);
+                    });
                 }
             }
 
@@ -340,16 +330,19 @@ namespace PracticePlugins
                 if (Plugin.CurrentEvent == EventType.Gungame && args.ChangeReason.Equals(RoleChangeReason.RemoteAdmin))
                 {
                     var newR = args.NewRole;
-                    if (newR == RoleTypeId.Overwatch || newR == RoleTypeId.Tutorial || newR == RoleTypeId.Filmmaker)
+                    MEC.Timing.CallDelayed(3, () =>
+                    {
+                 /*       if (newR == RoleTypeId.Overwatch || newR == RoleTypeId.Tutorial || newR == RoleTypeId.Filmmaker)
                     {
                         RemovePlayer(args.Player);
                         return;
-                    }
+                    }*/
                     if (newR == RoleTypeId.Spectator)
                     {
                         AssignTeam(args.Player);
                         SpawnPlayer(args.Player);
                     }
+                    });
                 }
             }
 

@@ -402,7 +402,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Commands\GunGame - Copy.cs" />
     <Compile Include="Events.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Events\DryFireFunni.cs" />
