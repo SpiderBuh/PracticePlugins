@@ -12,18 +12,16 @@ namespace PracticePlugins.Plugins
     public class DryFireFunni
     {
         [PluginEvent(ServerEventType.PlayerDryfireWeapon)]
-        public bool DryFire(PlayerDryfireWeaponEvent args)
+        public void DryFire(PlayerDryfireWeaponEvent args)
         {
             {
                 Player plr = args.Player;
                 Firearm gun = args.Firearm;
                 Player target = null;
 
-                if (!plr.IsTutorial) // Limits this plugin to tutorial players
-                    return true;
+                //if (!plr.IsTutorial) // Limits this plugin to tutorial players
+                //    return;
 
-                try
-                {
                     plr.ReceiveHint("Dryfire", 1);
 
                     if (gun.HitregModule.ClientCalculateHit(out var message)) //Maybe checks if hitreg occurred?
@@ -45,15 +43,10 @@ namespace PracticePlugins.Plugins
                     else
                         plr.ReceiveHint("Did not hit a player", 5);
                      
-                }
+                
 
-                catch (Exception ex)
-                {
-                    plr.ReceiveHint("An error occurred: " + ex.Message, 10);
-                    return false;
-                }
 
-                return true;
+                //return;
             }
         }
     }

@@ -404,11 +404,10 @@
   <ItemGroup>
     <Compile Include="Events.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="Events\DryFireFunni.cs" />
+    <Compile Include="SpecificEvents\DryFireFunni.cs" />
     <Compile Include="Commands\GunGame.cs" />
-    <Compile Include="miscExtras.cs" />
     <Compile Include="Plugin.cs" />
-    <Compile Include="Events\Pocket914Cards.cs" />
+    <Compile Include="SpecificEvents\Pocket914Cards.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -2,7 +2,6 @@
 using PluginAPI.Core.Attributes;
 using PluginAPI.Events;
 using PracticePlugins.Plugins;
-using static PracticePlugins.GunGame;
 
 namespace PracticePlugins
 {
@@ -29,9 +28,9 @@ namespace PracticePlugins
 
             EventManager.RegisterEvents<Events>(this);
             //EventManager.RegisterEvents<Pocket914Cards>(this);
-            EventManager.RegisterEvents<GunGame>(this);
-            //EventManager.RegisterEvents<DryFireFunni>(this);
+            EventManager.RegisterEvents<DryFireFunni>(this);
             EventManager.RegisterEvents<GunGameEventCommand>(this);
+            //EventManager.RegisterEvents<GunGameEventCommandStandalone>(this);
 
         }
 
