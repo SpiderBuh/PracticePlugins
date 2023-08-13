@@ -1,4 +1,5 @@
 ﻿using CommandSystem;
+using CommandSystem.Commands.RemoteAdmin;
 using CommandSystem.Commands.RemoteAdmin.Doors;
 using CustomPlayerEffects;
 using Interactables.Interobjects;
@@ -12,9 +13,11 @@ using PluginAPI.Core;
 using PluginAPI.Core.Attributes;
 using PluginAPI.Core.Doors;
 using PluginAPI.Core.Zones;
+using PluginAPI.Core.Zones.Entrance;
 using PluginAPI.Enums;
 using PluginAPI.Events;
 using PluginAPI.Roles;
+using Scp914;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -50,24 +53,28 @@ namespace PracticePlugins
 
         public static byte Tntf = 0; //Number of NTF
         public static byte Tchaos = 0; //Number of chaos
-        public List<string> SpawnLocationNames = new List<string>() { "HczCheckpointA", "HczCheckpointB", "Hcz079", "Hcz096", "Hcz106", "Hcz939", "HczServers", "HczArmory", "HczWarhead", "HczMicroHID", "Hcz049" }; //List of the names of all possible spawn points
-        //public static List<RoomIdentifier> Spawns = new List<RoomIdentifier>(); //List of all possible spawnpoints
-        //public static RoomIdentifier NTFSpawn = null; //Current NTF spawn
-        //public static RoomIdentifier ChaosSpawn = null; //Current chaos spawn
+        //public List<string> SpawnLocationNames = new List<string>() { "HczCheckpointA", "HczCheckpointB", "Hcz079", "Hcz096", "Hcz106", "Hcz939", "HczServers", "HczArmory", "HczWarhead", "HczMicroHID", "Hcz049" }; //List of the names of all possible spawn points
 
-        public static List<Vector3> tempSpawns = new List<Vector3>();
-        public static Vector3 tempNTFSpawn; //Current NTF spawn
-        public static Vector3 tempChaosSpawn; //Current chaos spawn
+        public List<string> BlacklistRoomNames = new List<string>() { "LczCheckpointA", "LczCheckpointB", "LczClassDSpawn", "HczCheckpointToEntranceZone", "HczCheckpointToEntranceZone", "HczWarhead", "Hcz049", "Hcz106" };
+        public static List<RoomIdentifier> BlacklistRooms = new List<RoomIdentifier>();
 
-
+        public static List<Vector3> Spawns = new List<Vector3>(); //List of all possible spawnpoints
+        public static Vector3 NTFSpawn; //Current NTF spawn
+        public static Vector3 ChaosSpawn; //Current chaos spawn
 
         public static byte credits = 0; //Tracks time to next spawnpoint rotation
         public List<ItemType> AllAmmo = new List<ItemType>() { ItemType.Ammo12gauge, ItemType.Ammo44cal, ItemType.Ammo556x45, ItemType.Ammo762x39, ItemType.Ammo9x19 }; //All ammo types for easy adding
         public static List<ItemType> Weapons = new List<ItemType>(); //List of all weapons
-        public static List<ItemType> EasyWeapons = new List<ItemType>() { ItemType.GunLogicer, ItemType.Jailbird, ItemType.ParticleDisruptor };
-        public static List<ItemType> NormalWeapons = new List<ItemType>() { ItemType.GunRevolver, ItemType.GunCrossvec, ItemType.GunE11SR, ItemType.GunShotgun };
-        public static List<ItemType> HardWeapons = new List<ItemType>() { ItemType.GunAK, ItemType.GunCom45, ItemType.GunFSP9 };
-        public static List<ItemType> VeryHardWeapons = new List<ItemType>() { ItemType.GunCOM15, ItemType.GunCOM18, ItemType.MicroHID };
+      //public static List<ItemType> EasyWeapons = new List<ItemType>() { ItemType.GunLogicer, ItemType.Jailbird, ItemType.ParticleDisruptor };
+      //public static List<ItemType> NormalWeapons = new List<ItemType>() { ItemType.GunRevolver, ItemType.GunCrossvec, ItemType.GunE11SR, ItemType.GunShotgun };
+      //public static List<ItemType> HardWeapons = new List<ItemType>() { ItemType.GunAK, ItemType.GunCom45, ItemType.GunFSP9 };
+      //public static List<ItemType> VeryHardWeapons = new List<ItemType>() { ItemType.GunCOM15, ItemType.GunCOM18, ItemType.MicroHID };
+
+        public static List<ItemType> EasyWeapons = new List<ItemType>() { ItemType.GunLogicer, ItemType.ParticleDisruptor, ItemType.GunCrossvec, ItemType.GunE11SR, ItemType.GunShotgun };
+        public static List<ItemType> NormalWeapons = new List<ItemType>() { ItemType.GunRevolver, ItemType.Jailbird, ItemType.GunAK, ItemType.GunCom45, ItemType.GunFSP9 };
+        public static List<ItemType> HardWeapons = new List<ItemType>() { ItemType.GunCOM15, ItemType.GunCOM18, ItemType.MicroHID };
+
+
         public static RoleTypeId[,] Roles = new RoleTypeId[,] { { RoleTypeId.NtfCaptain, RoleTypeId.ChaosRepressor }, { RoleTypeId.NtfSergeant, RoleTypeId.ChaosMarauder }, { RoleTypeId.NtfPrivate, RoleTypeId.ChaosConscript }, { RoleTypeId.Scientist, RoleTypeId.ClassD } }; //Levels
 
         //public static List<ItemType> nonShuffledWeapons = new List<ItemType>() { ItemType.GunLogicer, /*ItemType.Jailbird, ItemType.ParticleDisruptor,*/ ItemType.GunRevolver, ItemType.GunCrossvec, ItemType.GunE11SR, ItemType.GunShotgun, ItemType.GunAK, ItemType.GunCom45, ItemType.GunFSP9, ItemType.GunCOM15, ItemType.GunCOM18, ItemType.MicroHID }; //List of non shuffled weapons
@@ -104,37 +111,42 @@ namespace PracticePlugins
                 EasyWeapons.ShuffleList(); //Shuffles weapon levels
                 NormalWeapons.ShuffleList();
                 HardWeapons.ShuffleList();
-                VeryHardWeapons.ShuffleList();
-                Weapons = EasyWeapons.Concat(NormalWeapons).Concat(HardWeapons).Concat(VeryHardWeapons).ToList(); //Combines weapon lists
+                //VeryHardWeapons.ShuffleList();
+                Weapons = EasyWeapons.Concat(NormalWeapons).Concat(HardWeapons)/*.Concat(VeryHardWeapons)*/.ToList(); //Combines weapon lists
                                                                                                                   //Weapons = nonShuffledWeapons;
 
                 AllPlayers.Clear(); //Clears all values
-                tempSpawns.Clear();
+                Spawns.Clear();
                 Tntf = 0;
                 Tchaos = 0;
 
-                if (FFA)
-                    foreach (var door in DoorVariant.AllDoors)
+
+                foreach (string room in BlacklistRoomNames) //Gets blacklisted room objects 
+                    BlacklistRooms.AddRange(RoomIdentifier.AllRoomIdentifiers.Where(r => r.Name.ToString().Equals(room)));
+
+
+                    //if (FFA)
+                    foreach (var door in DoorVariant.AllDoors) //Adds every door in specified zone to spawns list
                     {
-                        if (door.IsInZone(zone))
+                        if (door.IsInZone(zone) && !(door is ElevatorDoor) && !door.Rooms.Any(x => BlacklistRooms.Any(y => y == x)))
                         {
                             Vector3 doorpos = door.gameObject.transform.position;
-                            tempSpawns.Add(new Vector3(doorpos.x, doorpos.y+1, doorpos.z));
-                            if (!door.RequiredPermissions.CheckPermissions(null, null) && !(door is PryableDoor) && door is BreakableDoor /* && currRoom.Name != RoomName.Hcz106*/)
-                                door.NetworkTargetState = true;
+                            Spawns.Add(new Vector3(doorpos.x, doorpos.y+1, doorpos.z));
+                            if (!door.RequiredPermissions.CheckPermissions(null, null)/* && !(door is PryableDoor)*//* && door is BreakableDoor /* && currRoom.Name != RoomName.Hcz106*/) //Opens locked doors
+                                door.NetworkTargetState = true; 
                         }
                     }
-                else
-                    foreach (string room in SpawnLocationNames)
-                    { //Gets room objects 
-                        RoomIdentifier currRoom = RoomIdentifier.AllRoomIdentifiers.Where(r => r.Name.ToString().Equals(room)).First();
-                        //Spawns.Add(currRoom);
-                        tempSpawns.Add(new Vector3(currRoom.ApiRoom.Position.x, currRoom.ApiRoom.Position.y + 1, currRoom.ApiRoom.Position.z));
+                //else
+                //    foreach (string room in SpawnLocationNames)
+                //    { //Gets room objects 
+                //        RoomIdentifier currRoom = RoomIdentifier.AllRoomIdentifiers.Where(r => r.Name.ToString().Equals(room)).First();
+                //        //Spawns.Add(currRoom);
+                //        tempSpawns.Add(new Vector3(currRoom.ApiRoom.Position.x, currRoom.ApiRoom.Position.y + 1, currRoom.ApiRoom.Position.z));
 
-                        foreach (var door in DoorVariant.DoorsByRoom[currRoom]) //opens keycard locked doors in spawn rooms, to not have people trapped
-                            if (!door.RequiredPermissions.CheckPermissions(null, null) && !(door is PryableDoor) && door is BreakableDoor /* && currRoom.Name != RoomName.Hcz106*/)
-                                door.NetworkTargetState = true;
-                    }
+                //        foreach (var door in DoorVariant.DoorsByRoom[currRoom]) //opens keycard locked doors in spawn rooms, to not have people trapped
+                //            if (!door.RequiredPermissions.CheckPermissions(null, null) && !(door is PryableDoor) && door is BreakableDoor /* && currRoom.Name != RoomName.Hcz106*/)
+                //                door.NetworkTargetState = true;
+                //    }
 
 
                 RollSpawns(); //Shuffles spawns
@@ -167,13 +179,10 @@ namespace PracticePlugins
         public void RollSpawns() //Changes spawn rooms
         {
             if (!FFA)
-                Cassie.Message(".G1", false, false, false); //Plays glitch sound when rooms shuffle
-            //Spawns.ShuffleList();
-            //NTFSpawn = Spawns.ElementAt(0);
-            //ChaosSpawn = Spawns.ElementAt(1);
-            tempSpawns.ShuffleList();
-            tempNTFSpawn = tempSpawns.ElementAt(0);
-            tempChaosSpawn = tempSpawns.ElementAt(1);
+                Cassie.Message(".G2", false, false, false); //Plays glitch sound when rooms shuffle
+            Spawns.ShuffleList();
+            NTFSpawn = Spawns.ElementAt(0);
+            ChaosSpawn = Spawns.ElementAt(1);
             credits = 0;
         }
 
@@ -185,7 +194,7 @@ namespace PracticePlugins
                 return;
             }
             //plr.ReceiveHint("Assigning team...", 1);
-            AllPlayers.Add(plr, new plrInfo { IsNtf = (Tntf < Tchaos)&&!FFA, Score = 0 });
+            AllPlayers.Add(plr, new plrInfo { IsNtf = (Tntf < Tchaos)&&!FFA, Score = 0 }); //Adds player to list, uses bool operations to determine teams
             if ((Tntf < Tchaos) && !FFA)
                 Tntf++;
             else
@@ -195,7 +204,7 @@ namespace PracticePlugins
             //return;
         }
 
-        public void RemovePlayer(Player plr) //Removes player from team
+        public void RemovePlayer(Player plr) //Removes player from list
         {
             if (AllPlayers.TryGetValue(plr, out var stats))
             {
@@ -209,13 +218,11 @@ namespace PracticePlugins
 
         public bool SpawnPlayer(Player plr) //Spawns player
         {
-            //  plr.ReceiveHint("Checking if you can spawn...", 1); //Message for testing purposes
             if (plr.IsServer || plr.Role == PlayerRoles.RoleTypeId.Overwatch || plr.Role == PlayerRoles.RoleTypeId.Tutorial || !AllPlayers.TryGetValue(plr, out var plrStats))
             {
                 plr.ReceiveHint("You are unable to spawn. Try rejoining", 10);
                 return false;
             }
-            //plr.ReceiveHint("Attempting spawn...", 2); //Message for testing purposes
             int level = 3;
             if (!FFA)    
                 level = Mathf.Clamp((int)Math.Round(((double)plrStats.Score / (Weapons.Count)) * 4), 0, 3); //Sets player's class to represent level
@@ -223,18 +230,18 @@ namespace PracticePlugins
             {
                 //plr.SetRole(Roles[level, 0]); //Gives role items
                 plr.ReferenceHub.roleManager.ServerSetRole(Roles[level, 0], RoleChangeReason.Respawn, RoleSpawnFlags.None);
-                //plr.Position = new Vector3(NTFSpawn.ApiRoom.Position.x, NTFSpawn.ApiRoom.Position.y + 1, NTFSpawn.ApiRoom.Position.z);
-                plr.Position = tempNTFSpawn;
+                plr.Position = NTFSpawn;
             }
             else
             {
                 //plr.SetRole(Roles[level, 1]);
                 plr.ReferenceHub.roleManager.ServerSetRole(Roles[level, 1], RoleChangeReason.Respawn, RoleSpawnFlags.None);
-                //plr.Position = new Vector3(ChaosSpawn.ApiRoom.Position.x, ChaosSpawn.ApiRoom.Position.y + 1, ChaosSpawn.ApiRoom.Position.z);
-                plr.Position = tempChaosSpawn;
+                plr.Position = ChaosSpawn;
             }
             plr.ClearInventory();
             plr.ReferenceHub.playerEffectsController.EnableEffect<SpawnProtected>(2, false);
+            plr.ReferenceHub.playerEffectsController.ChangeState<MovementBoost>(10, 99999, false); //Movement effects
+            plr.ReferenceHub.playerEffectsController.ChangeState<Scp1853>(10, 99999, false);
             plr.AddItem(ItemType.ArmorCombat);
             plr.AddItem(ItemType.Painkillers);
             foreach (ItemType ammo in AllAmmo) //Gives max ammo of all types
@@ -245,16 +252,14 @@ namespace PracticePlugins
 
         public void GiveGun(Player plr) //Gives player their next gun and equips it, and removes old gun
         {
-            //plr.ReceiveHint("Checking if you can get a gun...", 1); //Message for testing purposes
             if (plr.IsServer || plr.Role == PlayerRoles.RoleTypeId.Overwatch || plr.Role == PlayerRoles.RoleTypeId.Tutorial || !AllPlayers.TryGetValue(plr, out var plrStats))
                 return;
-            //plr.ReceiveHint("Giving weapon...", 2); //Message for testing purposes
+
             if (plrStats.Score > 0)
                 foreach (ItemBase item in plr.Items) //Removes last gun
                 {
                     if (item.ItemTypeId == Weapons.ElementAt(plrStats.Score - 1))
                     {
-                        //plr.ReferenceHub.inventory.ServerRemoveItem(item.ItemSerial, null);
                         plr.RemoveItem(item);
                         break;
                     }
@@ -363,7 +368,6 @@ namespace PracticePlugins
             }
         }
 
-        //[PluginEvent(ServerEventType.PlayerDeath)]
         [PluginEvent(ServerEventType.PlayerDying), PluginPriority(LoadPriority.Highest)]
         public void PlayerDeath(PlayerDyingEvent args)
         {
@@ -371,7 +375,6 @@ namespace PracticePlugins
             if (Plugin.CurrentEvent == EventType.Gungame && AllPlayers.TryGetValue(plr, out var plrStats))
             {
                 plr.ClearInventory();
-                //plr.ReceiveHint("You died", 1);
                 var atckr = args.Attacker;
                 if (atckr != null && atckr != plr)
                 {
@@ -385,10 +388,13 @@ namespace PracticePlugins
                         plr.ReceiveHint(atckr.Nickname + " killed you", 2);
                         atckr.ReceiveHint("You killed " + plr.Nickname, 2);
                         if (atckrStats.IsNtf != plrStats.IsNtf)
+                        {
                             AddScore(atckr);
+                            atckr.AddItem(ItemType.Medkit);
+                        }
                         else
                             if (!FFA)
-                                RemoveScore(atckr);
+                            RemoveScore(atckr);
                     }
                 }
                 else
@@ -427,7 +433,7 @@ namespace PracticePlugins
         [PluginEvent(ServerEventType.PlayerThrowItem)]
         public bool ThrowItem(PlayerThrowItemEvent args) //Stops items from being throwed
         {
-            if (Plugin.EventInProgress)
+            if (Plugin.EventInProgress && !args.Player.IsTutorial)
             {
                 if (Plugin.CurrentEvent == EventType.Gungame)
                     return false;
@@ -439,7 +445,7 @@ namespace PracticePlugins
         [PluginEvent(ServerEventType.PlayerDropAmmo)]
         public bool DropAmmo(PlayerDropAmmoEvent args) //Stops ammo from being dropped 
         {
-            if (Plugin.EventInProgress)
+            if (Plugin.EventInProgress && !args.Player.IsTutorial)
             {
                 if (Plugin.CurrentEvent == EventType.Gungame)
                     return false;
@@ -452,7 +458,7 @@ namespace PracticePlugins
         public bool PlayerPickup(PlayerSearchPickupEvent args)
         {
             var itemID = args.Item.Info.ItemId;
-            if (Plugin.CurrentEvent == EventType.Gungame)
+            if (Plugin.CurrentEvent == EventType.Gungame && !args.Player.IsTutorial)
                 if (itemID == ItemType.Painkillers || itemID == ItemType.Medkit || itemID == ItemType.Adrenaline) //Allows only medical pickups
                     return true;
                 else return false;
@@ -506,7 +512,7 @@ namespace PracticePlugins
         [PluginEvent(ServerEventType.PlayerInteractElevator)]
         public bool PlayerInteractElevator(PlayerInteractElevatorEvent args)
         {
-            if (Plugin.CurrentEvent == EventType.Gungame)
+            if (Plugin.CurrentEvent == EventType.Gungame && !args.Player.IsTutorial)
                 return false;
             return true;
         }
@@ -516,7 +522,7 @@ namespace PracticePlugins
         {
             if (Plugin.CurrentEvent == EventType.Gungame)
                 //ExplosionUtils.ServerExplode(args.Target.ReferenceHub);
-                args.Target.Damage(100, args.Player);
+                args.Target.Damage(420, args.Player);
         }
 
         [PluginEvent(ServerEventType.TeamRespawn)]
@@ -527,7 +533,44 @@ namespace PracticePlugins
             return true;
         }
 
-        /*   [PluginEvent(ServerEventType.PlayerCoinFlip)] // For testing purposes when I don't have test subjects to experiment on
+        [PluginEvent(ServerEventType.Scp914UpgradeInventory)]
+        public bool InventoryUpgrade(Scp914UpgradeInventoryEvent args)
+        {
+            if (Plugin.CurrentEvent == EventType.Gungame && !args.Player.IsTutorial)
+                if (Weapons.Contains(args.Item.ItemTypeId))
+                    return false;
+            return true;
+        }
+
+        [PluginEvent(ServerEventType.Scp914ProcessPlayer)]
+        public void PlayerUpgrade(Scp914ProcessPlayerEvent args)
+        {
+            Player plr = args.Player;
+            if (Plugin.CurrentEvent == EventType.Gungame && !plr.IsTutorial) {
+                switch (args.KnobSetting)
+                {
+                    case Scp914KnobSetting.Rough:
+                        MEC.Timing.CallDelayed((float)0.1, () =>
+                        { ExplosionUtils.ServerExplode(plr.ReferenceHub); }); break;
+                    case Scp914KnobSetting.Coarse:
+                        plr.EffectsManager.DisableAllEffects(); break;
+                    case Scp914KnobSetting.OneToOne:
+                        if (FFA)
+                        {
+                            plr.ReferenceHub.roleManager.ServerSetRole(RoleTypeId.Scientist, RoleChangeReason.RemoteAdmin, RoleSpawnFlags.None);
+                            plr.ReferenceHub.playerEffectsController.ChangeState<MovementBoost>(10, 99999, false);
+                            plr.ReferenceHub.playerEffectsController.ChangeState<Scp1853>(10, 99999, false);
+                        }
+                        break;
+                    case Scp914KnobSetting.VeryFine:
+                        plr.EffectsManager.EnableEffect<Scp207>(9999); break;
+                } 
+            }
+
+        }
+
+        /*
+           [PluginEvent(ServerEventType.PlayerCoinFlip)] // For testing purposes when I don't have test subjects to experiment on
            public void CoinFlip(PlayerCoinFlipEvent args)
            {
                var plr = args.Player;
@@ -546,8 +589,8 @@ namespace PracticePlugins
            public void GunUnload(PlayerUnloadWeaponEvent args)
            {
                AddScore(args.Player);
-           }*/
-
+           }
+        */
 
     }
 
