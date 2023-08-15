@@ -30,7 +30,7 @@ using InventorySystem.Items.Pickups;
 using MapGeneration;
 using Respawning;
 using PluginAPI.Events;
-
+using PluginAPI.Core.Doors;
 
 namespace PracticePlugins
 {

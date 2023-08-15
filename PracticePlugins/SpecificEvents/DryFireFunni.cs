@@ -19,8 +19,8 @@ namespace PracticePlugins.Plugins
                 Firearm gun = args.Firearm;
                 Player target = null;
 
-                //if (!plr.IsTutorial) // Limits this plugin to tutorial players
-                //    return;
+                if (!plr.IsTutorial) // Limits this plugin to tutorial players
+                    return;
 
                     plr.ReceiveHint("Dryfire", 1);
 
@@ -37,8 +37,8 @@ namespace PracticePlugins.Plugins
                             ExplosionUtils.ServerExplode(target.ReferenceHub); //Explodes target
                             plr.ReceiveHint("Exploded the nerd", 5);
                         }
-                        else
-                            plr.ReceiveHint("Hitreg activated, but was blocked", 5);
+                        //else
+                          //  plr.ReceiveHint("Hitreg activated, but was blocked", 5);
                     }
                     else
                         plr.ReceiveHint("Did not hit a player", 5);

@@ -30,7 +30,6 @@ namespace PracticePlugins
             //EventManager.RegisterEvents<Pocket914Cards>(this);
             EventManager.RegisterEvents<DryFireFunni>(this);
             EventManager.RegisterEvents<GunGameEventCommand>(this);
-            //EventManager.RegisterEvents<GunGameEventCommandStandalone>(this);
 
         }
 
