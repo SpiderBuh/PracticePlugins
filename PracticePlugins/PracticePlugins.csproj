@@ -402,6 +402,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Commands\getAttachmentCode.cs" />
+    <Compile Include="Commands\getPosition.cs" />
     <Compile Include="Events.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="SpecificEvents\DryFireFunni.cs" />
