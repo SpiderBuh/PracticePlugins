@@ -25,17 +25,10 @@ namespace PracticePlugins.Commands
 
         public bool Execute(ArraySegment<string> arguments, ICommandSender sender, out string response)
         {
-            response = "If you see this, something went wrong";
             try
             {
-                foreach (var plr in Player.GetPlayers())
-                {
-                    if (plr.LogName.Equals(sender.LogName))
-                    {
-                        response = plr.Position.ToString();
-                        break;
-                    }
-                }
+                Player plr = Player.Get(sender);
+                response = plr.Position.ToString();
                 return true;
             }
             catch (Exception e) { response = e.Message; return false; }

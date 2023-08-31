@@ -29,26 +29,22 @@ namespace PracticePlugins.Commands
             Firearm temp;
             try
             {
-                foreach (var plr in Player.GetPlayers())
+                Player plr = Player.Get(sender);
+                if (plr.CurrentItem is Firearm)
                 {
-                    if (plr.LogName.Equals(sender.LogName))
+                    temp = (Firearm)plr.CurrentItem;
+                    if (arguments.Count == 0)
+                        response = "code: " + temp.GetCurrentAttachmentsCode().ToString("X");
+                    else
                     {
-                        if (plr.CurrentItem is Firearm)
-                        {
-                            temp = (Firearm)plr.CurrentItem;
-                            if (arguments.Count == 0)
-                                response = "code: " + temp.GetCurrentAttachmentsCode().ToString("X");
-                            else
-                            {
-                                temp.Status = new FirearmStatus(temp.AmmoManagerModule.MaxAmmo, FirearmStatusFlags.MagazineInserted, uint.Parse(arguments.ElementAt(0), System.Globalization.NumberStyles.HexNumber));
-                                response = "Applied code " + arguments.ElementAt(0);
-                            }
-                        }
-                        break;
+                        temp.Status = new FirearmStatus(temp.AmmoManagerModule.MaxAmmo, FirearmStatusFlags.MagazineInserted, uint.Parse(arguments.ElementAt(0), System.Globalization.NumberStyles.HexNumber));
+                        response = "Applied code " + arguments.ElementAt(0);
                     }
                 }
+
                 return true;
-            } catch(Exception e) { response = e.Message; return false; }
+            }
+            catch (Exception e) { response = e.Message; return false; }
         }
 
 

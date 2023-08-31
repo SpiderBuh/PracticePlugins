@@ -27,7 +27,7 @@ namespace PracticePlugins.Plugins
                     if (gun.HitregModule.ClientCalculateHit(out var message)) //Maybe checks if hitreg occurred?
                     {
                         uint targetNID = message.TargetNetId; //I barely know what a netID is
-                        foreach (Player plrTarget in Server.GetPlayers()) //Loops through each player
+                        foreach (Player plrTarget in Player.GetPlayers()) //Loops through each player
                         {
                             if (plrTarget.ReferenceHub.netId == targetNID && !plrTarget.IsServer) //Checks if the player is being targeted
                                 target = plrTarget;
