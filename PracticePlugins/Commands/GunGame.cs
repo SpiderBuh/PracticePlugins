@@ -7,8 +7,10 @@ using InventorySystem;
 using InventorySystem.Items;
 using InventorySystem.Items.Firearms;
 using InventorySystem.Items.Firearms.Attachments;
+using InventorySystem.Items.Jailbird;
 using InventorySystem.Items.Pickups;
 using InventorySystem.Items.Usables.Scp244;
+using InventorySystem.Items.Usables.Scp330;
 using LightContainmentZoneDecontamination;
 using MapGeneration;
 using Mirror;
@@ -55,6 +57,7 @@ namespace PracticePlugins
             public bool IsNtfTeam { get; set; }
             public byte Score { get; set; }
             public short InnerPos { get; set; }
+            public Player[] lastHit { get; set; } = { null, null };
 
             public PlrInfo(bool isNtfTeam, byte score = 0)
             {
@@ -70,6 +73,13 @@ namespace PracticePlugins
             {
                 if (InnerPos >= 0)
                     InnerPos = (short)(++InnerPosition[Score + 1] - 64);
+            }
+            public void hit(Player plr)
+            {
+                if (plr == lastHit[0])
+                    return;
+                lastHit[1] = lastHit[0];
+                lastHit[0] = plr;
             }
         }
 
@@ -90,7 +100,7 @@ namespace PracticePlugins
 
         public readonly List<string> BlacklistRoomNames = new List<string>() { "LczCheckpointA", "LczCheckpointB", /*"LczClassDSpawn",*/ "HczCheckpointToEntranceZone", "HczCheckpointToEntranceZone", "HczWarhead", "Hcz049", "Hcz106", "Hcz079", "Lcz173" };
         public static List<RoomIdentifier> BlacklistRooms = new List<RoomIdentifier>();
-        
+
         public static List<Vector3> Spawns = new List<Vector3>(); //List of all possible spawnpoints
         public static Vector3 NTFSpawn; //Current NTF spawn
         public static Vector3 ChaosSpawn; //Current chaos spawn
@@ -114,6 +124,8 @@ namespace PracticePlugins
             new Gat(ItemType.GunCrossvec, 0xA054),
 
             new Gat(ItemType.GunE11SR, 0x1220A42),
+            
+            new Gat(ItemType.GunFRMG0, 0x26042),
 
         };
         public static List<Gat> Tier2 = new List<Gat>() {
@@ -124,14 +136,14 @@ namespace PracticePlugins
             new Gat(ItemType.GunE11SR, 0x491504),
             new Gat(ItemType.GunE11SR),
 
-            //new Gat(ItemType.GunRevolver, 0x452),
+            new Gat(ItemType.GunFRMG0/*, 0x29210*/),           
 
             new Gat(ItemType.GunShotgun),
         };
-        public static List<Gat> Tier3 = new List<Gat>() {
-            new Gat(ItemType.MicroHID),
+        public static List<Gat> Tier3 = new List<Gat>() {            
+            new Gat(ItemType.GunA7),
 
-            new Gat(ItemType.GunRevolver, 0x22C),
+            //new Gat(ItemType.GunRevolver, 0x22C),
 
             new Gat(ItemType.GunCOM18, 0x12A),
 
@@ -141,9 +153,9 @@ namespace PracticePlugins
 
             new Gat(ItemType.GunCrossvec),
         };
-        public static List<Gat> Tier3S = null;
+        //public static List<Gat> Tier3S = null;
         public static List<Gat> Tier4 = new List<Gat>() {
-            //new Gat(ItemType.GunCOM15),
+            //new Gat(ItemType.GunCOM15),            
 
             new Gat(ItemType.GunCom45),
 
@@ -154,6 +166,16 @@ namespace PracticePlugins
             new Gat(ItemType.GunRevolver),
         };
         //public static List<Gat> Tier4T = null;
+
+        public static List<Gat> SpecialTier = new List<Gat>() { // W.I.P
+            new Gat(ItemType.MicroHID),
+
+            new Gat(ItemType.GrenadeHE),
+
+            new Gat(ItemType.SCP018),
+
+            new Gat(ItemType.SCP330), //pink candy
+        };
 
         public static RoleTypeId[,] Roles = new RoleTypeId[,] { { RoleTypeId.ChaosRepressor, RoleTypeId.NtfCaptain }, { RoleTypeId.ChaosMarauder, RoleTypeId.NtfSergeant }, { RoleTypeId.ChaosConscript, RoleTypeId.NtfPrivate }, { RoleTypeId.ClassD, RoleTypeId.Scientist } }; //Player visual levels
 
@@ -182,7 +204,7 @@ namespace PracticePlugins
                         case 'H':
                             zone = FacilityZone.HeavyContainment; break;
                         case 'E':
-                            zone = FacilityZone.Entrance; break;                        
+                            zone = FacilityZone.Entrance; break;
                         case 'S':
                             zone = FacilityZone.Surface; break;
                     }
@@ -193,16 +215,16 @@ namespace PracticePlugins
                 Tntf = 0;
                 Tchaos = 0;
 
-                Tier3S = Tier3.ToList();
+                //Tier3S = Tier3.ToList();
                 if (zone == FacilityZone.Surface)
                 {
-                    Tier3S.RemoveAt(0);
+                    //Tier3S.RemoveAt(0);
                     Spawns = SurfaceSpawns.ToList();
                 }
 
                 //Tier4T = FFA ? Tier4.ToList() : Tier4.Skip(1).ToList();
 
-                NumGuns = (byte)(Tier1.Count + Tier2.Count + Tier3S.Count + Tier4/*T*/.Count);
+                NumGuns = (byte)(Tier1.Count + Tier2.Count + Tier3/*S*/.Count + Tier4/*T*/.Count);
                 InnerPosition = new short[NumGuns + /*1*/2];
 
                 byte NumTarget = arguments.Count < 3 ? NumGuns : byte.Parse(arguments.ElementAt(2));
@@ -217,8 +239,8 @@ namespace PracticePlugins
                 byte z = 0;
                 foreach (RoomName roomName in LRNames)
                 {
-                    if (RoomIdUtils.TryFindRoom(LRNames[z], FacilityZone.None, RoomShape.Undefined, out var foundRoom))   
-                        LoadingRoom[z] = foundRoom.transform.position + foundRoom.transform.rotation * LROffset[z];                    
+                    if (RoomIdUtils.TryFindRoom(LRNames[z], FacilityZone.None, RoomShape.Undefined, out var foundRoom))
+                        LoadingRoom[z] = foundRoom.transform.position + foundRoom.transform.rotation * LROffset[z];
                     else LoadingRoom[z] = new Vector3(-15.5f, 1014.5f, -31.5f);
 
                     z++;
@@ -227,7 +249,7 @@ namespace PracticePlugins
 
                 foreach (string room in BlacklistRoomNames) //Gets blacklisted room objects for current game
                     BlacklistRooms.AddRange(RoomIdentifier.AllRoomIdentifiers.Where(r => r.Name.ToString().Equals(room)));
-                              
+
                 foreach (var door in DoorVariant.AllDoors) //Adds every door in specified zone to spawns list
                 {
                     if (door.IsInZone(zone) && !(door is ElevatorDoor || door is CheckpointDoor) && !door.Rooms.Any(x => BlacklistRooms.Any(y => y == x)))
@@ -253,8 +275,8 @@ namespace PracticePlugins
                 if (zone == FacilityZone.Surface /*&& !Plugin.EventInProgress*/ && InventoryItemLoader.AvailableItems.TryGetValue(ItemType.SCP244a, out var gma) && InventoryItemLoader.AvailableItems.TryGetValue(ItemType.SCP244b, out var gpa)) //SCP244 obsticals on surface
                 {
                     ExplosionUtils.ServerExplode(new Vector3(72f, 992f, -43f), new Footprint()); //Bodge to get rid of old grandma's if the round didn't restart
-                    ExplosionUtils.ServerExplode(new Vector3(11.3f, 997.47f, -35.3f), new Footprint());
-
+                    ExplosionUtils.ServerExplode(new Vector3(11.3f, 997.47f, -35.3f), new Footprint());             
+                   
                     Scp244DeployablePickup Grandma = UnityEngine.Object.Instantiate(gma.PickupDropModel, new Vector3(72f, 992f, -43f), UnityEngine.Random.rotation) as Scp244DeployablePickup;
                     Grandma.NetworkInfo = new PickupSyncInfo
                     {
@@ -263,7 +285,7 @@ namespace PracticePlugins
                         Serial = ItemSerialGenerator.GenerateNext()
                     };
                     Grandma.State = Scp244State.Active;
-                    NetworkServer.Spawn(Grandma.gameObject);                    
+                    NetworkServer.Spawn(Grandma.gameObject);
 
                     Scp244DeployablePickup Grandpa = UnityEngine.Object.Instantiate(gpa.PickupDropModel, new Vector3(11.3f, 997.47f, -35.3f), UnityEngine.Random.rotation) as Scp244DeployablePickup;
                     Grandpa.NetworkInfo = new PickupSyncInfo
@@ -308,7 +330,7 @@ namespace PracticePlugins
             byte T3 = (byte)Math.Round((double)Tier3.Count / NumGuns * num);
             byte T4 = (byte)(num - T1 - T2 - T3);
 
-            AllWeapons = ProcessTier(Tier1, T1).Concat(ProcessTier(Tier2, T2)).Concat(ProcessTier(Tier3S, T3)).Concat(ProcessTier(Tier4/*T*/, T4)).ToList();
+            AllWeapons = ProcessTier(Tier1, T1).Concat(ProcessTier(Tier2, T2)).Concat(ProcessTier(Tier3/*S*/, T3)).Concat(ProcessTier(Tier4/*T*/, T4)).ToList();
         }
 
         ///<summary>Takes in a list and returns a list of the target length comprising of the input's values</summary>
@@ -378,7 +400,7 @@ namespace PracticePlugins
             int level = FFA ? 3 : Mathf.Clamp((int)Math.Round((double)plrStats.Score / AllWeapons.Count * 3), 0, 2);
             plr.ReferenceHub.roleManager.ServerSetRole(Roles[level, Convert.ToInt32(plrStats.IsNtfTeam)], RoleChangeReason.Respawn, RoleSpawnFlags.None); //Uses bool in 2d array to determine spawn class
             plr.ClearInventory();
-            plr.Position = LoadingRoom[((int)zone)-1];
+            plr.Position = LoadingRoom[((int)zone) - 1];
             plr.ReferenceHub.playerEffectsController.ChangeState<MovementBoost>(25, 99999, false); //Movement effects
             plr.ReferenceHub.playerEffectsController.ChangeState<Scp1853>((byte)(AllWeapons.Count - plrStats.Score), 99999, false);
             plr.AddItem(ItemType.ArmorCombat);
@@ -387,12 +409,13 @@ namespace PracticePlugins
                 plr.AddAmmo(ammo, (ushort)plr.GetAmmoLimit(ammo));
             plr.SendBroadcast($"Guns left: {AllWeapons.Count - plrStats.Score}", 5);
 
-            plr.ReferenceHub.playerEffectsController.ChangeState<DamageReduction>(200, 5+4, false);
+            plr.ReferenceHub.playerEffectsController.ChangeState<DamageReduction>(200, 2 + 4, false);
             MEC.Timing.CallDelayed(4, () =>
             {
-                plr.Position = plrStats.IsNtfTeam ? NTFSpawn : ChaosSpawn;                
+                plr.Position = plrStats.IsNtfTeam ? NTFSpawn : ChaosSpawn;
                 plr.ReferenceHub.playerEffectsController.ChangeState<Invigorated>(127, 5, false);
                 GiveGun(plr, 1.5f);
+                plr.ReferenceHub.playerEffectsController.ChangeState<Invisible>(127, 1, false);
                 if (SpecialEvent) { plr.EffectsManager.EnableEffect<Scp207>(9999); plr.AddItem(ItemType.Painkillers); plr.AddItem(ItemType.Painkillers); plr.AddItem(ItemType.Painkillers); }
                 if (FFA) RollSpawns();
             });
@@ -404,6 +427,14 @@ namespace PracticePlugins
             if (plr.IsServer || plr.IsOverwatchEnabled || plr.IsTutorial || !AllPlayers.TryGetValue(plr, out var plrStats))
                 return;
 
+            foreach (ItemBase item in plr.Items) //Removes last gun
+            {
+                if (item.ItemTypeId == AllWeapons.ElementAt(plrStats.Score).ItemType)
+                {
+                    return;
+                }
+            }
+
             if (plrStats.Score > 0)
                 foreach (ItemBase item in plr.Items) //Removes last gun
                 {
@@ -414,21 +445,24 @@ namespace PracticePlugins
                     }
                 }
 
-
-            Gat currGun = AllWeapons.ElementAt(plrStats.Score);
-            ItemBase weapon = plr.AddItem(currGun.ItemType);
-            if (weapon is Firearm)
+            MEC.Timing.CallDelayed(delay, () =>
             {
-                Firearm firearm = weapon as Firearm;
-                uint attachment_code = currGun.AttachmentCode == 0 ? AttachmentsUtils.GetRandomAttachmentsCode(firearm.ItemTypeId) : currGun.AttachmentCode; //Random attachments if no attachment code specified
-                                                                                                                                                             //AttachmentsServerHandler.PlayerPreferences[plr.ReferenceHub][firearm.ItemTypeId] //Player's chosen weapon attachments
-                AttachmentsUtils.ApplyAttachmentsCode(firearm, attachment_code, true);
-                firearm.Status = new FirearmStatus(firearm.AmmoManagerModule.MaxAmmo, FirearmStatusFlags.MagazineInserted, attachment_code);
-            }
+                
+                Gat currGun = AllWeapons.ElementAt(plrStats.Score);
+                ItemBase weapon = plr.AddItem(currGun.ItemType);
+                if (weapon is Firearm)
+                {
+                    Firearm firearm = weapon as Firearm;
+                    uint attachment_code = currGun.AttachmentCode == 0 ? AttachmentsUtils.GetRandomAttachmentsCode(firearm.ItemTypeId) : currGun.AttachmentCode; //Random attachments if no attachment code specified
+                                                                                                                                                                 //AttachmentsServerHandler.PlayerPreferences[plr.ReferenceHub][firearm.ItemTypeId] //Player's chosen weapon attachments
+                    AttachmentsUtils.ApplyAttachmentsCode(firearm, attachment_code, true);
+                    firearm.Status = new FirearmStatus(firearm.AmmoManagerModule.MaxAmmo, FirearmStatusFlags.MagazineInserted, attachment_code);
+                }
 
-            MEC.Timing.CallDelayed(0.1f + delay, () =>
-            {
-                plr.CurrentItem = weapon;
+                MEC.Timing.CallDelayed(0.1f, () =>
+                {
+                    plr.CurrentItem = weapon;
+                });
             });
         }
 
@@ -436,7 +470,14 @@ namespace PracticePlugins
         {
             if (plr.IsServer || plr.IsOverwatchEnabled || plr.IsTutorial || !AllPlayers.TryGetValue(plr, out var plrStats))
             {
-                plr.ReceiveHint("You aren't registered as a player. Try rejoining", 5);
+                //plr.ReceiveHint("You aren't registered as a player. Try rejoining", 5);
+                return;
+            }
+            plr.EffectsManager.EnableEffect<Invigorated>(5, true);
+            if (!FFA && plr.Role == Roles[3, Convert.ToInt32(plrStats.IsNtfTeam)])
+            {
+                plr.AddAmmo(ItemType.Ammo9x19, 12);
+                plr.Heal(25);                
                 return;
             }
             if (plrStats.Score >= AllWeapons.Count - 1) //Final level check
@@ -465,7 +506,7 @@ namespace PracticePlugins
                 plr.ReferenceHub.roleManager.ServerSetRole(RoleTypeId.Scp0492, RoleChangeReason.Respawn, RoleSpawnFlags.AssignInventory); //Spawns zombie without increasing score
                 plr.ReferenceHub.playerEffectsController.ChangeState<MovementBoost>(20, 99999, false);
                 plr.ReferenceHub.playerEffectsController.ChangeState<Scp1853>(11, 99999, false);
-                plr.ReferenceHub.playerEffectsController.ChangeState<Scp207>(2, 99999, false);
+                plr.ReferenceHub.playerEffectsController.ChangeState<Scp207>(1, 99999, false);
                 if (!SpecialEvent) { AlphaWarheadController.Singleton.StartDetonation(false, true); SpecialEvent = true; Cassie.Message("WARNING . .G3 . SCP 0 4 9 2 DETECTED", false, false, false); }
                 else Cassie.Message("pitch_1.50 .G4", false, false, false);
                 firearm = plr.AddItem(ItemType.GunCOM15) as Firearm;
@@ -483,6 +524,11 @@ namespace PracticePlugins
             //plrStats.Score++;
             GiveGun(plr);
             plr.SendBroadcast($"{AllWeapons.Count - plrStats.Score}", 1);
+            MEC.Timing.CallDelayed(2f, () =>
+            {
+                plr.AddItem(ItemType.Medkit);
+            });
+            
         }
 
         public void RemoveScore(Player plr)
@@ -521,14 +567,7 @@ namespace PracticePlugins
             plr.ReferenceHub.playerEffectsController.DisableAllEffects();
             ChaosSpawn = plr.Position;
             NTFSpawn = plr.Position;
-            Firearm firearm = plr.AddItem(ItemType.GunLogicer) as Firearm;
-            AttachmentsUtils.ApplyAttachmentsCode(firearm, 0x1881, true);
-            firearm.Status = new FirearmStatus(firearm.AmmoManagerModule.MaxAmmo, FirearmStatusFlags.MagazineInserted, 0x1881);
-            MEC.Timing.CallDelayed(0.1f, () =>
-            {
-                plr.CurrentItem = firearm;
-            });
-
+            
             var sortedPlayers = AllPlayers.OrderByDescending(pair => pair.Value.Score)
                                          .ThenBy(pair => pair.Value.InnerPos)
                                          .ToDictionary(pair => pair.Key, pair => pair.Value);
@@ -564,34 +603,36 @@ namespace PracticePlugins
                 playerPoints.Add(loser.UserId, positionScore + teamBonus);
                 plrsLeft--;
             }
-            ScoreManager.ScoreStorage.AddScore(playerPoints);
-
-            //foreach (Player loser in Player.GetPlayers())
-            //{
-            //    if (loser.IsServer || loser.IsOverwatchEnabled || loser.IsTutorial || !AllPlayers.TryGetValue(loser, out var loserInfo))
-            //        continue;
-            //   // ScoreManager.ScoreStorage.AddScore(loser.LogName, loserInfo.Score);
-            //    if (loser != plr)
-            //    {
-            //        loser.SetRole(RoleTypeId.ClassD);
-            //        loser.ReferenceHub.playerEffectsController.EnableEffect<SeveredHands>();
-            //        loser.Position = plr.Position;
-            //    }
-            //    loser.SendBroadcast($"<b><color=yellow>{plr.Nickname} wins!</color></b>{team}", 10, shouldClearPrevious: true);
-            //}
+            ScoreManager.ScoreStorage.AddScore(playerPoints);           
+            Firearm firearm = plr.AddItem(ItemType.GunLogicer) as Firearm;
+            AttachmentsUtils.ApplyAttachmentsCode(firearm, 0x1881, true);
+            firearm.Status = new FirearmStatus(firearm.AmmoManagerModule.MaxAmmo, FirearmStatusFlags.MagazineInserted, 0x1881);
+            MEC.Timing.CallDelayed(0.1f, () =>
+            {
+                plr.CurrentItem = firearm;
+            });
         }
 
         [PluginEvent(ServerEventType.PlayerDying), PluginPriority(LoadPriority.Highest)]
         public void PlayerDeath(PlayerDyingEvent args)
         {
+            if (args.Player == null) return;
 
             if (Plugin.CurrentEvent == EventType.Gungame && AllPlayers.TryGetValue(args.Player, out var plrStats))
             {
                 var plr = args.Player;
-                plr.ClearInventory();
+                plr.ClearInventory();                
                 var atckr = args.Attacker;
-                if (atckr != null && atckr != plr && atckr.IsAlive)
+                if (atckr != null && atckr != plr /*&& atckr.IsAlive*/)
                 {
+
+                    if (plrStats.lastHit[1] != null)
+                    {
+                        AddScore(plrStats.lastHit[1]);
+                        plrStats.lastHit[1].ReceiveHint("Assist", 1);
+                    }
+                    plrStats.lastHit = new Player[] { null, null };
+
                     if (atckr.Role == RoleTypeId.Scp0492 || (atckr.CurrentItem.ItemTypeId == ItemType.GunCOM15 && !FFA)) //Triggers win if player is on last level
                     {
                         TriggerWin(atckr);
@@ -603,9 +644,8 @@ namespace PracticePlugins
 
                         if (atckrStats.IsNtfTeam != plrStats.IsNtfTeam || FFA)
                         {
-                            AddScore(atckr);
-                            atckr.AddItem(ItemType.Medkit);
-                            atckr.ReceiveHint($"You killed {plr.Nickname} ({AllWeapons.Count - plrStats.Score})", 2);
+                            AddScore(atckr);                            
+                            atckr.ReceiveHint($"You killed {plr.Nickname} ({AllWeapons.Count - plrStats.Score})", 2);                            
                         }
                         else
                         {
@@ -618,7 +658,7 @@ namespace PracticePlugins
                 else
                 {
                     plr.ReceiveHint("Shrimply a krill issue", 3);
-                    RemoveScore(plr); //Removes a score if a player dies to natural means
+                    //RemoveScore(plr); //Removes a score if a player dies to natural means
                 }
                 if (!FFA)
                 {
@@ -633,6 +673,18 @@ namespace PracticePlugins
                     SpawnPlayer(plr);
                 });
             }
+        }
+
+        [PluginEvent(ServerEventType.PlayerDamage)]
+        public void PlayerDamageEvent(PlayerDamageEvent args)
+        {
+            if (Plugin.CurrentEvent != EventType.Gungame || FFA)
+                return;
+            if (!AllPlayers.TryGetValue(args.Player, out var plrInfo) || !AllPlayers.TryGetValue(args.Target, out var trgtInfo))
+                return;
+            if (plrInfo.IsNtfTeam != trgtInfo.IsNtfTeam)
+                trgtInfo.hit(args.Player);
+
         }
 
 
@@ -748,9 +800,9 @@ namespace PracticePlugins
             var plr = args.Player;
             plr.ClearInventory();
             MEC.Timing.CallDelayed(0.1f, () =>
-            { 
-                plr.ClearInventory(); 
-                GiveGun(plr); 
+            {
+                plr.ClearInventory();
+                GiveGun(plr);
                 plr.ReferenceHub.playerEffectsController.ChangeState<MovementBoost>(25, 99999, false); //Movement effects
                 plr.ReferenceHub.playerEffectsController.ChangeState<Scp1853>(200, 99999, false);
                 plr.AddItem(ItemType.ArmorHeavy);

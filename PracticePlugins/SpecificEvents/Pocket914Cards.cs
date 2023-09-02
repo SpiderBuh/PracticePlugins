@@ -107,14 +107,14 @@ namespace PracticePlugins
                     {ItemType.KeycardJanitor,               new ItemType[] { ItemType.Flashlight,                   ItemType.KeycardScientist } },
                     {ItemType.KeycardScientist,             new ItemType[] { ItemType.KeycardJanitor,               ItemType.KeycardResearchCoordinator } },
                     {ItemType.KeycardResearchCoordinator,   new ItemType[] { ItemType.KeycardScientist,             ItemType.KeycardContainmentEngineer } },
-                    {ItemType.KeycardContainmentEngineer,   new ItemType[] { ItemType.KeycardResearchCoordinator,   ItemType.KeycardNTFCommander } },
-                    {ItemType.KeycardGuard,                 new ItemType[] { ItemType.KeycardScientist,             ItemType.KeycardNTFOfficer } },
-                    {ItemType.KeycardNTFOfficer,            new ItemType[] { ItemType.KeycardGuard,                 ItemType.KeycardNTFLieutenant } },
-                    {ItemType.KeycardNTFLieutenant,         new ItemType[] { ItemType.KeycardNTFOfficer,            ItemType.KeycardNTFCommander} },
-                    {ItemType.KeycardNTFCommander,          new ItemType[] { ItemType.KeycardNTFLieutenant,         ItemType.KeycardO5 } },
+                    {ItemType.KeycardContainmentEngineer,   new ItemType[] { ItemType.KeycardResearchCoordinator,   ItemType.KeycardMTFCaptain } },
+                    {ItemType.KeycardGuard,                 new ItemType[] { ItemType.KeycardScientist,             ItemType.KeycardMTFPrivate } },
+                    {ItemType.KeycardMTFPrivate,            new ItemType[] { ItemType.KeycardGuard,                 ItemType.KeycardMTFOperative } },
+                    {ItemType.KeycardMTFOperative,          new ItemType[] { ItemType.KeycardMTFPrivate,            ItemType.KeycardMTFCaptain} },
+                    {ItemType.KeycardMTFCaptain,            new ItemType[] { ItemType.KeycardMTFOperative,          ItemType.KeycardO5 } },
                     {ItemType.KeycardZoneManager,           new ItemType[] { ItemType.KeycardScientist,             ItemType.KeycardFacilityManager } },
                     {ItemType.KeycardFacilityManager,       new ItemType[] { ItemType.KeycardZoneManager,           ItemType.KeycardO5 } },
-                    {ItemType.KeycardChaosInsurgency,       new ItemType[] { ItemType.KeycardNTFLieutenant,         ItemType.KeycardO5 } },
+                    {ItemType.KeycardChaosInsurgency,       new ItemType[] { ItemType.KeycardMTFOperative,          ItemType.KeycardO5 } },
                     {ItemType.KeycardO5,                    new ItemType[] { ItemType.KeycardFacilityManager,       ItemType.Jailbird } }
                 };
 
